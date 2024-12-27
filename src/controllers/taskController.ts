@@ -43,15 +43,29 @@ export class TaskController {
     }
 
     async update(req: Request, res: Response) {
-        const { id } = req.params; // Получаем ID задачи из параметров запроса
-        const { status } = req.body; // Получаем новый статус из тела запроса
+        const id = parseInt(req.params.id);
+        const { status } = req.body;
+
+        if (isNaN(id)) {
+            return res.status(400).json({ error: 'Invalid task ID' });
+        }
+
+        if (!status) {
+            return res.status(400).json({ error: 'Status is required' });
+        }
 
         try {
-            const updatedTask = await taskService.updateTaskStatus(Number(id), status);
+            const updatedTask = await taskService.updateTaskStatus(id, status);
             res.status(200).json(updatedTask);
         } catch (error) {
             if (error instanceof Error) {
-                res.status(404).json({ error: error.message });
+                if (error.message.includes('not found')) {
+                    res.status(404).json({ error: error.message });
+                } else if (error.message.includes('Invalid status')) {
+                    res.status(400).json({ error: error.message });
+                } else {
+                    res.status(500).json({ error: error.message });
+                }
             } else {
                 res.status(500).json({ error: 'Unexpected error occurred' });
             }

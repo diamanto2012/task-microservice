@@ -4,7 +4,7 @@ import { User } from './user';
 @Entity()
 export class Task {
     @PrimaryGeneratedColumn()
-    id!: number; // Используйте "!" для указания на инициализацию позже
+    id!: number;
 
     @Column()
     title!: string;
@@ -16,5 +16,5 @@ export class Task {
     status!: string;
 
     @ManyToOne(() => User, (user) => user.tasks)
-    user!: User; // Используйте "!" для указания на инициализацию позже
+    user!: User;
 }

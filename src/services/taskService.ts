@@ -1,46 +1,51 @@
-import { AppDataSource } from '../database/connection'; // Импортируйте ваш источник данных
-import redisClient from '../database/redisClient'; // Импортируйте ваш Redis клиент
+import { AppDataSource } from '../database/connection';
+import redisClient from '../database/redisClient';
 import { Task } from '../models/task';
 import { User } from '../models/user';
-
+import { deleteKeysByPattern, checkCache } from '../utils/redisUtils';
 
 export class TaskService {
     private taskRepository = AppDataSource.getRepository(Task);
     private userRepository = AppDataSource.getRepository(User);
 
     async createTask(title: string, description: string, userId: number): Promise<Task> {
+        // Проверяем текущее состояние кэша перед созданием задачи
+        console.log('\nChecking cache before creating new task:');
+        await checkCache();
+
         let user = await this.userRepository.findOne({
             where: { id: userId },
         });
     
-
         // Если пользователь не найден, создаем нового пользователя
         if (!user) {
             user = this.userRepository.create({
-                id: 1, // Устанавливаем id равным 1
-                email: 'mail@mail.ru', // Устанавливаем почту
-                username: 'user', // Устанавливаем имя пользователя
+                id: 1,
+                email: 'mail@mail.ru',
+                username: 'user',
             });
-            await this.userRepository.save(user); // Сохраняем нового пользователя
+            await this.userRepository.save(user);
         }
 
         const task = this.taskRepository.create({ title, description, user });
+        const savedTask = await this.taskRepository.save(task);
 
         // Очистка кэша после добавления новой задачи
-        await redisClient.del('tasks:*'); // Удаляем все ключи с префиксом 'tasks:'
+        console.log('\nClearing cache after creating new task:');
+        await deleteKeysByPattern('tasks:*');
 
-        return await this.taskRepository.save(task);
+        // Проверяем состояние кэша после очистки
+        console.log('\nChecking cache after clearing:');
+        await checkCache();
+
+        return savedTask;
     }
+
     async getTasks(page: number, limit: number): Promise<any> {
         const cacheKey = `tasks:${page}:${limit}`;
 
         console.log(`Fetching tasks for page ${page} with limit ${limit}`);
 
-        await redisClient.del('tasks:*'); // Удаляем все ключи с префиксом 'tasks:'
-        // Получение всех ключей (осторожно с производительностью)
-        const keys = await redisClient.keys('tasks:*'); // Получаем все ключи с префиксом 'tasks:'
-        console.log('All keys in cache:', keys);
-        
         
         // Попробуем получить данные из кэша
         const cachedTasks = await redisClient.get(cacheKey);
@@ -49,40 +54,56 @@ export class TaskService {
             return JSON.parse(cachedTasks); // Возвращаем данные из кэша
         }
 
-        const [tasks, total] = await this.taskRepository.findAndCount({
+        // Получаем общее количество задач отдельным запросом
+        const total = await this.taskRepository.count();
+
+        // Получаем задачи с пагинацией
+        const tasks = await this.taskRepository.find({
             skip: (page - 1) * limit,
             take: limit,
-            relations: ['user'], // Предполагается, что у вас есть связь с пользователем
+            relations: ['user'],
         });
+
+        const result = { tasks, total };
 
         // Сохраняем результаты в кэш
-        await redisClient.set(cacheKey, JSON.stringify({ tasks, total }), {
-            EX: 10, // Устанавливаем время жизни кэша (например, 1 час)
+        await redisClient.set(cacheKey, JSON.stringify(result), {
+            EX: 10,
         });
 
-        return { tasks, total };
+        return result;
     }
 
     async updateTaskStatus(id: number, status: string): Promise<Task> {
-        const task = await this.taskRepository.findOne({ where: { id } });
+        const task = await this.taskRepository.findOne({ 
+            where: { id },
+            relations: ['user']
+        });
 
         if (!task) {
-            throw new Error('Task not found');
+            throw new Error(`Task with id ${id} not found`);
         }
 
-        task.status = status; // Обновляем статус
-        await this.taskRepository.save(task); // Сохраняем изменения
+        // Проверяем, что статус является допустимым значением
+        const validStatuses = ['pending', 'in-progress', 'done'];
+        if (!validStatuses.includes(status)) {
+            throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+        }
 
-        // Очистка кэша после обновления задачи
-        await redisClient.del('tasks:*'); // Удаляем все ключи с префиксом 'tasks:'
+        // Обновляем статус
+        task.status = status;
+        const updatedTask = await this.taskRepository.save(task);
 
-        return task;
+        // Очищаем кэш после обновления
+        await deleteKeysByPattern('tasks:*');
+
+        return updatedTask;
     }
 
     async deleteTasks(ids: number[]): Promise<void> {
-        await this.taskRepository.delete(ids); // Удаляем задачи по массиву идентификаторов
+        await this.taskRepository.delete(ids);
 
         // Очистка кэша после удаления задач
-        await redisClient.del('tasks:*'); // Удаляем все ключи с префиксом 'tasks:'
+        await deleteKeysByPattern('tasks:*');
     }
 }
