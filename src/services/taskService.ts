@@ -1,10 +1,12 @@
-import { AppDataSource } from '../database/connection';
-import redisClient from '../database/redisClient';
-import { Task } from '../models/task';
-import { User } from '../models/user';
+import { AppDataSource } from '../config/data.source';
+import redisClient from '../config/redis.client';
+import { Task } from '../db/models/task';
+import { User } from '../db/models/user';
 import { deleteKeysByPattern, checkCache } from '../utils/redisUtils';
+import { config } from '../config/config';
+import { In } from 'typeorm';
 
-const CACHE_TTL = 60; // 60 секунд
+const CACHE_TTL = config.redis.ttl;
 const CACHE_PREFIX = 'tasks:';
 
 export class TaskService {
@@ -117,16 +119,14 @@ export class TaskService {
     }
 
     async deleteTasks(ids: number[]): Promise<void> {
-        console.log(`\n=== Deleting Tasks: ${ids.join(', ')} ===`);
-        
-        // Проверяем кэш перед удалением
-        console.log('\n=== Cache Check Before Deletion ===');
+        // Проверяем текущее состояние кэша перед удалением задач
+        console.log('\n=== Cache Check Before Tasks Deletion ===');
         await checkCache();
 
-        await this.taskRepository.delete(ids);
+        await this.taskRepository.delete({ id: In(ids) });
 
         // Очистка кэша после удаления задач
-        console.log('\n=== Clearing Cache After Deletion ===');
+        console.log('\n=== Clearing Cache After Tasks Deletion ===');
         await this.clearCache();
 
         // Проверяем состояние кэша после очистки

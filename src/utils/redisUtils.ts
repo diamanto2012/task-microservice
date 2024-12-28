@@ -1,4 +1,4 @@
-import redisClient from '../database/redisClient';
+import redisClient from '../config/redis.client';
 
 export async function deleteKeysByPattern(pattern: string): Promise<void> {
     // Сначала выведем список ключей, которые будут удалены

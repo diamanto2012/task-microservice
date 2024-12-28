@@ -4,7 +4,7 @@ import { Task } from './task';
 @Entity()
 export class User {
     @PrimaryGeneratedColumn()
-    id!: number; // Используем "!" для указания на инициализацию позже
+    id!: number;
 
     @Column()
     username!: string;
@@ -13,5 +13,5 @@ export class User {
     email!: string;
 
     @OneToMany(() => Task, (task) => task.user)
-    tasks!: Task[]; // Используем "!" для указания на инициализацию позже
+    tasks!: Task[];
 }

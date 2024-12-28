@@ -12,7 +12,7 @@ export class Task {
     @Column()
     description!: string;
 
-    @Column({ default: 'pending' }) // Устанавливаем статус по умолчанию
+    @Column({ default: 'pending' })
     status!: string;
 
     @ManyToOne(() => User, (user) => user.tasks)
