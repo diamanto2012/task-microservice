@@ -1,24 +1,23 @@
-import { Request, Response } from 'express';
-import { AppDataSource } from '../../config/data.source';
-import { Task } from '../../db/models/task';
-import { taskValidation } from '../validations/task.validation';
-import { TaskService } from '../../services/taskService';
-import { ValidationErrorItem } from 'joi';
-
-const taskService = new TaskService();
-
-export class TaskController {
-    private taskRepository = AppDataSource.getRepository(Task);
-
-    async create(req: Request, res: Response): Promise<void> {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TaskController = void 0;
+const data_source_1 = require("../../config/data.source");
+const task_1 = require("../../db/models/task");
+const task_validation_1 = require("../validations/task.validation");
+const taskService_1 = require("../../services/taskService");
+const taskService = new taskService_1.TaskService();
+class TaskController {
+    constructor() {
+        this.taskRepository = data_source_1.AppDataSource.getRepository(task_1.Task);
+    }
+    async create(req, res) {
         try {
-            const { error } = taskValidation.createTask.body.validate(req.body);
+            const { error } = task_validation_1.taskValidation.createTask.body.validate(req.body);
             if (error) {
-                const errors = error.details.map((detail: ValidationErrorItem) => ({
-                    path: detail.path.map((p: string | number) => String(p)),
+                const errors = error.details.map((detail) => ({
+                    path: detail.path.map((p) => String(p)),
                     message: detail.message
                 }));
-
                 res.status(400).json({
                     status: 'error',
                     message: 'Validation failed',
@@ -26,49 +25,48 @@ export class TaskController {
                 });
                 return;
             }
-
             const task = await taskService.createTask(req.body.title, req.body.description, req.body.user_id);
             res.status(201).json({ id: task.id });
             return;
-        } catch (error) {
+        }
+        catch (error) {
             if (error instanceof Error) {
                 res.status(500).json({ error: error.message });
                 return;
-            } else {
+            }
+            else {
                 res.status(500).json({ error: 'Unexpected error occurred' });
                 return;
             }
         }
     }
-
-    async getTasks(req: Request, res: Response): Promise<void> {
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
-
+    async getTasks(req, res) {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
         try {
             const result = await taskService.getTasks(page, limit);
             res.status(200).json(result);
             return;
-        } catch (error) {
+        }
+        catch (error) {
             if (error instanceof Error) {
                 res.status(500).json({ error: error.message });
                 return;
-            } else {
+            }
+            else {
                 res.status(500).json({ error: 'Unexpected error occurred' });
                 return;
             }
         }
     }
-
-    async update(req: Request, res: Response): Promise<void> {
+    async update(req, res) {
         try {
-            const { error } = taskValidation.updateTask.body.validate(req.body);
+            const { error } = task_validation_1.taskValidation.updateTask.body.validate(req.body);
             if (error) {
-                const errors = error.details.map((detail: ValidationErrorItem) => ({
-                    path: detail.path.map((p: string | number) => String(p)),
+                const errors = error.details.map((detail) => ({
+                    path: detail.path.map((p) => String(p)),
                     message: detail.message
                 }));
-
                 res.status(400).json({
                     status: 'error',
                     message: 'Validation failed',
@@ -76,46 +74,46 @@ export class TaskController {
                 });
                 return;
             }
-
             const id = parseInt(req.params.id);
             if (isNaN(id)) {
                 res.status(400).json({ error: 'Invalid task ID' });
                 return;
             }
-
             try {
                 await taskService.updateTaskStatus(id, req.body.status);
                 res.status(200).json({ message: 'Task updated successfully' });
                 return;
-            } catch (error) {
+            }
+            catch (error) {
                 if (error instanceof Error) {
                     res.status(500).json({ error: error.message });
                     return;
-                } else {
+                }
+                else {
                     res.status(500).json({ error: 'Unexpected error occurred' });
                     return;
                 }
             }
-        } catch (error) {
+        }
+        catch (error) {
             if (error instanceof Error) {
                 res.status(500).json({ error: error.message });
                 return;
-            } else {
+            }
+            else {
                 res.status(500).json({ error: 'Unexpected error occurred' });
                 return;
             }
         }
     }
-
-    async delete(req: Request, res: Response): Promise<void> {
+    async delete(req, res) {
         try {
-            const { error } = taskValidation.deleteTask.params.validate(req.params);
+            const { error } = task_validation_1.taskValidation.deleteTask.params.validate(req.params);
             if (error) {
-                const errors = error.details.map((detail: ValidationErrorItem) => ({
-                    path: detail.path.map((p: string | number) => String(p)),
+                const errors = error.details.map((detail) => ({
+                    path: detail.path.map((p) => String(p)),
                     message: detail.message
                 }));
-
                 res.status(400).json({
                     status: 'error',
                     message: 'Validation failed',
@@ -123,46 +121,46 @@ export class TaskController {
                 });
                 return;
             }
-
             const id = parseInt(req.params.id);
             if (isNaN(id)) {
                 res.status(400).json({ error: 'Invalid task ID' });
                 return;
             }
-
             try {
                 await taskService.deleteTasks([id]);
                 res.status(200).json({ message: 'Task deleted successfully' });
                 return;
-            } catch (error) {
+            }
+            catch (error) {
                 if (error instanceof Error) {
                     res.status(500).json({ error: error.message });
                     return;
-                } else {
+                }
+                else {
                     res.status(500).json({ error: 'Unexpected error occurred' });
                     return;
                 }
             }
-        } catch (error) {
+        }
+        catch (error) {
             if (error instanceof Error) {
                 res.status(500).json({ error: error.message });
                 return;
-            } else {
+            }
+            else {
                 res.status(500).json({ error: 'Unexpected error occurred' });
                 return;
             }
         }
     }
-
-    async deleteTasks(req: Request, res: Response): Promise<void> {
+    async deleteTasks(req, res) {
         try {
-            const { error } = taskValidation.deleteTasks.body.validate(req.body);
+            const { error } = task_validation_1.taskValidation.deleteTasks.body.validate(req.body);
             if (error) {
-                const errors = error.details.map((detail: ValidationErrorItem) => ({
-                    path: detail.path.map((p: string | number) => String(p)),
+                const errors = error.details.map((detail) => ({
+                    path: detail.path.map((p) => String(p)),
                     message: detail.message
                 }));
-
                 res.status(400).json({
                     status: 'error',
                     message: 'Validation failed',
@@ -170,35 +168,37 @@ export class TaskController {
                 });
                 return;
             }
-
             const { ids } = req.body;
-
             if (!Array.isArray(ids) || ids.length === 0) {
                 res.status(400).json({ error: 'Invalid task IDs. Expected non-empty array of IDs.' });
                 return;
             }
-
             try {
                 await taskService.deleteTasks(ids);
                 res.status(200).json({ message: 'Tasks deleted successfully' });
                 return;
-            } catch (error) {
+            }
+            catch (error) {
                 if (error instanceof Error) {
                     res.status(500).json({ error: error.message });
                     return;
-                } else {
+                }
+                else {
                     res.status(500).json({ error: 'Unexpected error occurred' });
                     return;
                 }
             }
-        } catch (error) {
+        }
+        catch (error) {
             if (error instanceof Error) {
                 res.status(500).json({ error: error.message });
                 return;
-            } else {
+            }
+            else {
                 res.status(500).json({ error: 'Unexpected error occurred' });
                 return;
             }
         }
     }
 }
+exports.TaskController = TaskController;

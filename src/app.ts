@@ -1,12 +1,14 @@
 import express from 'express';
 import { AppDataSource } from './config/data.source';
 import taskRoutes from './api/routes/taskRoutes';
+import userRoutes from './api/routes/userRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use('/api', taskRoutes);
+app.use('/api', userRoutes);
 
 const startServer = async () => {
     try {
