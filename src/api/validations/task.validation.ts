@@ -16,7 +16,7 @@ export const taskValidation = {
             status: Joi.string()
                 .valid('pending', 'in-progress', 'done')
                 .default('pending'),
-            userId: Joi.number()
+            user_id: Joi.number()
                 .integer()
                 .positive()
         })
